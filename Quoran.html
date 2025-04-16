@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecteur MP3 Élégant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Animation pour la barre de progression */
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Style personnalisé pour la barre de progression */
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 10px;
+            background: #e2e8f0;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+        }
+        
+        /* Style pour les cartes de musique */
+        .music-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Style pour la musique en cours de lecture */
+        .now-playing {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        /* Style pour le bouton de répétition actif */
+        .repeat-active {
+            color: #3b82f6;
+        }
+        
+        /* Style pour le bouton de suppression */
+        .delete-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .music-card:hover .delete-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-blue-600 mb-2">Melody<span class="text-blue-400">Flow</span></h1>
+            <p class="text-gray-600">Votre lecteur MP3 élégant et simple</p>
+        </header>
+        
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <!-- Player principal -->
+            <div class="p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-24 h-24 bg-blue-100 rounded-lg overflow-hidden mr-4">
+                        <img id="cover-art" src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Cover" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1">
+                        <h2 id="song-title" class="text-xl font-semibold text-gray-800">Aucune musique sélectionnée</h2>
+                        <p id="song-artist" class="text-gray-500">Sélectionnez une musique dans la liste</p>
+                    </div>
+                </div>
+                
+                <!-- Barre de progression -->
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm text-gray-500 mb-1">
+                        <span id="current-time">0:00</span>
+                        <span id="total-time">0:00</span>
+                    </div>
+                    <input type="range" id="progress-bar" class="w-full" value="0" min="0">
+                </div>
+                
+                <!-- Contrôles -->
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <button id="volume-btn" class="text-gray-600 hover:text-blue-600 mr-2">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                        <input type="range" id="volume-control" class="w-24" value="70" min="0" max="100">
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <button id="prev-btn" class="text-gray-600 hover:text-blue-600 text-xl">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button id="play-btn" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button id="next-btn" class="text-gray-600 hover:text-blue-600 text-xl">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <button id="repeat-btn" class="text-gray-600 hover:text-blue-600" title="Répéter">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button id="stop-btn" class="text-gray-600 hover:text-blue-600">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Liste de lecture -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">Liste de lecture</h3>
+            </div>
+            
+            <div id="playlist" class="divide-y divide-gray-200">
+                <!-- Exemple de musique -->
+                <div class="music-card p-4 hover:bg-gray-50 cursor-pointer transition duration-200" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" data-title="SoundHelix Song 1" data-artist="SoundHelix" data-cover="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gray-200 rounded mr-3 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Cover" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">SoundHelix Song 1</h4>
+                            <p class="text-sm text-gray-500">SoundHelix</p>
+                        </div>
+                        <span class="text-gray-400 text-sm">3:45</span>
+                        <button class="delete-btn text-red-500 hover:text-red-700 ml-3">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Autres musiques -->
+                <div class="music-card p-4 hover:bg-gray-50 cursor-pointer transition duration-200" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" data-title="Mélodie douce" data-artist="Artiste inconnu" data-cover="https://images.unsplash.com/photo-1496293455970-f8581aae0e3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gray-200 rounded mr-3 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1496293455970-f8581aae0e3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Cover" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">Mélodie douce</h4>
+                            <p class="text-sm text-gray-500">Artiste inconnu</p>
+                        </div>
+                        <span class="text-gray-400 text-sm">2:30</span>
+                        <button class="delete-btn text-red-500 hover:text-red-700 ml-3">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="music-card p-4 hover:bg-gray-50 cursor-pointer transition duration-200" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" data-title="Rythme entraînant" data-artist="DJ Sample" data-cover="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gray-200 rounded mr-3 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Cover" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">Rythme entraînant</h4>
+                            <p class="text-sm text-gray-500">DJ Sample</p>
+                        </div>
+                        <span class="text-gray-400 text-sm">4:15</span>
+                        <button class="delete-btn text-red-500 hover:text-red-700 ml-3">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="music-card p-4 hover:bg-gray-50 cursor-pointer transition duration-200" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" data-title="Ambiance relaxante" data-artist="Nature Sounds" data-cover="https://images.unsplash.com/photo-1511671782779-c97d3d27d1f0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gray-200 rounded mr-3 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27d1f0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Cover" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">Ambiance relaxante</h4>
+                            <p class="text-sm text-gray-500">Nature Sounds</p>
+                        </div>
+                        <span class="text-gray-400 text-sm">5:20</span>
+                        <button class="delete-btn text-red-500 hover:text-red-700 ml-3">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upload de fichiers -->
+        <div class="mt-6 bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">Ajouter vos propres musiques</h3>
+            </div>
+            <div class="p-4">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <i class="fas fa-music text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-500 mb-3">Glissez-déposez vos fichiers MP3 ici ou</p>
+                    <input type="file" id="file-upload" class="hidden" accept="audio/mp3" multiple>
+                    <label for="file-upload" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg cursor-pointer">
+                        <i class="fas fa-upload mr-2"></i>Parcourir
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Audio element (invisible) -->
+    <audio id="audio-player"></audio>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Éléments du DOM
+            const audioPlayer = document.getElementById('audio-player');
+            const playBtn = document.getElementById('play-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const repeatBtn = document.getElementById('repeat-btn');
+            const progressBar = document.getElementById('progress-bar');
+            const currentTimeEl = document.getElementById('current-time');
+            const totalTimeEl = document.getElementById('total-time');
+            const volumeBtn = document.getElementById('volume-btn');
+            const volumeControl = document.getElementById('volume-control');
+            const songTitle = document.getElementById('song-title');
+            const songArtist = document.getElementById('song-artist');
+            const coverArt = document.getElementById('cover-art');
+            const musicCards = document.querySelectorAll('.music-card');
+            const fileUpload = document.getElementById('file-upload');
+            const playlist = document.getElementById('playlist');
+            
+            // Variables d'état
+            let isPlaying = false;
+            let currentSongIndex = -1;
+            let songs = [];
+            let repeatMode = false; // false = pas de répétition, true = répétition activée
+            
+            // Initialisation des chansons à partir des cartes de musique
+            musicCards.forEach((card, index) => {
+                const song = {
+                    src: card.dataset.src,
+                    title: card.dataset.title,
+                    artist: card.dataset.artist,
+                    cover: card.dataset.cover,
+                    element: card
+                };
+                songs.push(song);
+                
+                // Ajout d'un écouteur d'événement pour chaque carte
+                card.addEventListener('click', (e) => {
+                    // Ne pas jouer la chanson si on clique sur le bouton de suppression
+                    if (!e.target.closest('.delete-btn')) {
+                        playSong(index);
+                    }
+                });
+                
+                // Ajout d'un écouteur pour le bouton de suppression
+                const deleteBtn = card.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteSong(index);
+                });
+            });
+            
+            // Fonction pour supprimer une chanson de la liste
+            function deleteSong(index) {
+                if (index < 0 || index >= songs.length) return;
+                
+                // Si la chanson en cours de lecture est supprimée
+                if (currentSongIndex === index) {
+                    audioPlayer.pause();
+                    isPlaying = false;
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                    currentSongIndex = -1;
+                    songTitle.textContent = 'Aucune musique sélectionnée';
+                    songArtist.textContent = 'Sélectionnez une musique dans la liste';
+                } else if (currentSongIndex > index) {
+                    // Ajuster l'index de la chanson en cours si nécessaire
+                    currentSongIndex--;
+                }
+                
+                // Supprimer la chanson du tableau
+                songs.splice(index, 1);
+                
+                // Supprimer l'élément du DOM
+                const cardToRemove = playlist.children[index];
+                playlist.removeChild(cardToRemove);
+                
+                // Si la playlist est vide, réinitialiser le lecteur
+                if (songs.length === 0) {
+                    audioPlayer.src = '';
+                    progressBar.value = 0;
+                    currentTimeEl.textContent = '0:00';
+                    totalTimeEl.textContent = '0:00';
+                }
+            }
+            
+            // Fonction pour formater le temps (secondes en MM:SS)
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+            
+            // Fonction pour jouer une chanson
+            function playSong(index) {
+                if (index < 0 || index >= songs.length) return;
+                
+                // Mettre à jour l'index de la chanson actuelle
+                currentSongIndex = index;
+                
+                // Charger la nouvelle chanson
+                const song = songs[currentSongIndex];
+                audioPlayer.src = song.src;
+                songTitle.textContent = song.title;
+                songArtist.textContent = song.artist;
+                coverArt.src = song.cover;
+                
+                // Mettre en surbrillance la chanson en cours de lecture
+                musicCards.forEach(card => card.classList.remove('now-playing'));
+                song.element.classList.add('now-playing');
+                
+                // Jouer la chanson
+                audioPlayer.play()
+                    .then(() => {
+                        isPlaying = true;
+                        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                    })
+                    .catch(error => {
+                        console.error("Erreur de lecture:", error);
+                    });
+            }
+            
+            // Fonction pour passer à la chanson suivante
+            function nextSong() {
+                if (songs.length === 0) return;
+                
+                let nextIndex = currentSongIndex + 1;
+                if (nextIndex >= songs.length) {
+                    nextIndex = 0; // Revenir au début si on est à la fin
+                }
+                playSong(nextIndex);
+            }
+            
+            // Fonction pour revenir à la chanson précédente
+            function prevSong() {
+                if (songs.length === 0) return;
+                
+                let prevIndex = currentSongIndex - 1;
+                if (prevIndex < 0) {
+                    prevIndex = songs.length - 1; // Aller à la fin si on est au début
+                }
+                playSong(prevIndex);
+            }
+            
+            // Écouteurs d'événements
+            playBtn.addEventListener('click', () => {
+                if (currentSongIndex === -1 && songs.length > 0) {
+                    // Si aucune chanson n'est sélectionnée, jouer la première
+                    playSong(0);
+                } else if (isPlaying) {
+                    audioPlayer.pause();
+                    isPlaying = false;
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                } else {
+                    audioPlayer.play()
+                        .then(() => {
+                            isPlaying = true;
+                            playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                        })
+                        .catch(error => {
+                            console.error("Erreur de lecture:", error);
+                        });
+                }
+            });
+            
+            stopBtn.addEventListener('click', () => {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                isPlaying = false;
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                progressBar.value = 0;
+                currentTimeEl.textContent = '0:00';
+            });
+            
+            nextBtn.addEventListener('click', nextSong);
+            prevBtn.addEventListener('click', prevSong);
+            
+            // Bouton de répétition
+            repeatBtn.addEventListener('click', () => {
+                repeatMode = !repeatMode;
+                if (repeatMode) {
+                    repeatBtn.classList.add('repeat-active');
+                    repeatBtn.title = "Désactiver la répétition";
+                } else {
+                    repeatBtn.classList.remove('repeat-active');
+                    repeatBtn.title = "Activer la répétition";
+                }
+            });
+            
+            // Mise à jour de la barre de progression
+            audioPlayer.addEventListener('timeupdate', () => {
+                const currentTime = audioPlayer.currentTime;
+                const duration = audioPlayer.duration || 1; // Éviter la division par zéro
+                
+                // Mettre à jour la barre de progression
+                progressBar.value = (currentTime / duration) * 100;
+                
+                // Mettre à jour l'affichage du temps
+                currentTimeEl.textContent = formatTime(currentTime);
+                
+                // Si la durée est disponible, l'afficher
+                if (duration && !isNaN(duration)) {
+                    totalTimeEl.textContent = formatTime(duration);
+                }
+            });
+            
+            // Permettre de cliquer sur la barre de progression pour avancer/reculer
+            progressBar.addEventListener('input', () => {
+                const seekTime = (progressBar.value / 100) * audioPlayer.duration;
+                audioPlayer.currentTime = seekTime;
+            });
+            
+            // Gestion du volume
+            volumeControl.addEventListener('input', () => {
+                audioPlayer.volume = volumeControl.value / 100;
+                
+                // Mettre à jour l'icône du volume
+                if (audioPlayer.volume === 0) {
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                } else if (audioPlayer.volume < 0.5) {
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
+                } else {
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }
+            });
+            
+            volumeBtn.addEventListener('click', () => {
+                if (audioPlayer.volume > 0) {
+                    // Sauvegarder le volume actuel avant de couper le son
+                    volumeBtn.dataset.lastVolume = audioPlayer.volume;
+                    audioPlayer.volume = 0;
+                    volumeControl.value = 0;
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                } else {
+                    // Rétablir le volume précédent
+                    const lastVolume = parseFloat(volumeBtn.dataset.lastVolume) || 0.7;
+                    audioPlayer.volume = lastVolume;
+                    volumeControl.value = lastVolume * 100;
+                    
+                    if (lastVolume < 0.5) {
+                        volumeBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
+                    } else {
+                        volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    }
+                }
+            });
+            
+            // Quand une chanson se termine
+            audioPlayer.addEventListener('ended', () => {
+                if (repeatMode) {
+                    // Si la répétition est activée, rejouer la même chanson
+                    audioPlayer.currentTime = 0;
+                    audioPlayer.play();
+                } else {
+                    // Sinon passer à la chanson suivante
+                    nextSong();
+                }
+            });
+            
+            // Gestion de l'upload de fichiers
+            fileUpload.addEventListener('change', function(e) {
+                const files = e.target.files;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    
+                    if (file.type === 'audio/mp3') {
+                        const song = {
+                            src: URL.createObjectURL(file),
+                            title: file.name.replace('.mp3', ''),
+                            artist: 'Artiste inconnu',
+                            cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80'
+                        };
+                        
+                        songs.push(song);
+                        
+                        // Créer une nouvelle carte pour la chanson
+                        const newCard = document.createElement('div');
+                        newCard.className = 'music-card p-4 hover:bg-gray-50 cursor-pointer transition duration-200';
+                        newCard.dataset.src = song.src;
+                        newCard.dataset.title = song.title;
+                        newCard.dataset.artist = song.artist;
+                        newCard.dataset.cover = song.cover;
+                        
+                        newCard.innerHTML = `
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gray-200 rounded mr-3 overflow-hidden">
+                                    <img src="${song.cover}" alt="Cover" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-gray-800">${song.title}</h4>
+                                    <p class="text-sm text-gray-500">${song.artist}</p>
+                                </div>
+                                <span class="text-gray-400 text-sm">--:--</span>
+                                <button class="delete-btn text-red-500 hover:text-red-700 ml-3">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                        
+                        // Ajouter un écouteur d'événement à la nouvelle carte
+                        newCard.addEventListener('click', (e) => {
+                            // Ne pas jouer la chanson si on clique sur le bouton de suppression
+                            if (!e.target.closest('.delete-btn')) {
+                                playSong(songs.length - 1);
+                            }
+                        });
+                        
+                        // Ajouter un écouteur pour le bouton de suppression
+                        const deleteBtn = newCard.querySelector('.delete-btn');
+                        deleteBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            deleteSong(songs.length - 1);
+                        });
+                        
+                        playlist.appendChild(newCard);
+                    }
+                }
+                
+                // Si c'est la première chanson ajoutée, la jouer automatiquement
+                if (songs.length === files.length && files.length > 0) {
+                    playSong(0);
+                }
+            });
+            
+            // Permettre le glisser-déposer de fichiers
+            const dropArea = document.querySelector('.border-dashed');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                dropArea.classList.add('border-blue-500', 'bg-blue-50');
+            }
+            
+            function unhighlight() {
+                dropArea.classList.remove('border-blue-500', 'bg-blue-50');
+            }
+            
+            dropArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                // Simuler un changement d'input file
+                fileUpload.files = files;
+                const event = new Event('change');
+                fileUpload.dispatchEvent(event);
+            }
+        });
+    </script>
+</body>
+</html>
